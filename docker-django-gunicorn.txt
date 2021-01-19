@@ -1,0 +1,81 @@
+FILE STRUCTURE:-
+	->django_project{manage.py, dbsqiltes3, django_project(settings.py, urls.py, wsgi.py), nvz(app)}
+	->Dockerfile
+	->docker-compose.yml
+	->.env 
+	->entrypoint.sh
+	->requirments.txt
+	->nginx
+		1)default.conf
+		2)Dockerfile
+
+==================================================Dockerfile===================================================
+FROM python:3.8.5-apline
+RUN pip install -upgrade pip
+COPY ./requirments.txt .
+RUN pip install -r requirments.txt
+COPY ./django_project /app
+WORKDIR /app
+COPY ./entrypoint.sh/
+ENTRYPOINT ["sh","entrypoint.sh"]
+	
+================================================dockerr-compose.yml=============================================
+version:"3.7"
+services:
+	nginx:
+            build: ./nginx
+            port:
+		- "8000:8000"
+            volumes:
+		-static:/static
+	    depends_on:
+	    - "django-gunicorn"
+servies:
+	django_gunicorn:
+	    build: .
+	    port:
+		- "8000:8000"
+	    volumes:
+		-static:/static
+            env_file:
+		- .env
+volumes:
+    static:
+
+==============================================requirments.txt==================================================
+Django==3.0.8
+gunicorn==20.0.4
+
+==============================================entrypoint.sh====================================================
+python manage.py makemigrations --no-input
+python manange.py collectstatic --no-input
+gunicorn django_project.wsgi:application --bind 0.0.0.0:8000
+
+=================================================.env==========================================================
+DEBUG = True
+SECRECR_KEY = 'z7264t44@&cd*xzaq7p04t8_vstht_b^ej)(c1=4887cmteh%4'
+
+===============================================nginx===========================================================
+1) defalt.conf
+	upstream django{
+		server django_gunicorn:8000;
+	}
+	server{
+		listen 80;
+		location \ {
+			proxy_passs http://django;
+		}
+	location /static/{
+			alias /static/;
+		}
+       }
+
+2) Dockerfile
+	FROM nginx:1.19.0-alpine
+	COPY ./default.conf /etc/nginx/conf.d/default.conf	 
+
+==============================================settinngs.py===================================================== 
+DEBUG = os.getenv('DEBUG')
+SECRET_KEY = os.getenv('SECRET_KEY')
+allowed all host ('*')
+STATIC_ROOT = '/static/'
